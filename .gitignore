@@ -2,4 +2,8 @@ vendor/
 node_modules/
 .env
 .idea/
+dist/
 Thumbs.db
+*.epub
+*.mobi
+*.zip

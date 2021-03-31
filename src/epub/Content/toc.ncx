@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">
+<head>
+    <meta content="urn:uuid:{{uuid}}" name="dtb:uid"/>
+    <meta content="1" name="dtb:depth"/>
+    <meta content="0" name="dtb:totalPageCount"/>
+    <meta content="0" name="dtb:maxPageNumber"/>
+</head>
+<docTitle><text>{{title}}</text></docTitle>
+<docAuthor><text>{{author}}</text></docAuthor>
+<navMap>
+    <navPoint id="nav-cover">
+        <navLabel><text>Cover</text></navLabel>
+        <content src="cover.xhtml"/>
+    </navPoint>
+    {{#items}}
+    <navPoint id="nav-prologue">
+        <navLabel><text>{{label}}</text></navLabel>
+        <content src="{{path}}"/>
+    </navPoint>
+    {{/items}}
+</navMap>
+</ncx>

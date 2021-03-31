@@ -1,5 +1,7 @@
 # Lao Tzu’s Tao Te Ching translations
 
+Work in progress..
+
 ## Uwagi
 
 - dla laików, przystępne, bez szczegółowej analizy źródeł, chodzi o to aby rozpropagować text
