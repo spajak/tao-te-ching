@@ -43,6 +43,8 @@
         <item href="epub.xhtml" id="epub" media-type="application/xhtml+xml"/>
         <item href="toc.xhtml" id="toc" media-type="application/xhtml+xml" properties="nav"/>
         <item href="titlepage.xhtml" id="titlepage" media-type="application/xhtml+xml"/>
+        <item href="yin-yang.svg" id="yin-yang.svg" media-type="image/svg+xml"/>
+        <item href="yin-yang.xhtml" id="yin-yang" media-type="application/xhtml+xml"/>
         <!-- Main content -->
         {{#items}}
         <item href="{{path}}" id="{{id}}" media-type="application/xhtml+xml"/>
@@ -56,5 +58,6 @@
         {{#items}}
         <itemref idref="{{id}}"/>
         {{/items}}
+        <itemref idref="yin-yang"/>
     </spine>
 </package>
