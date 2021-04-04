@@ -10,14 +10,18 @@
 <docAuthor><text>{{author}}</text></docAuthor>
 <navMap>
     <navPoint id="nav-cover">
-        <navLabel><text>Cover</text></navLabel>
+        <navLabel><text>{{cover_label}}</text></navLabel>
         <content src="cover.xhtml"/>
     </navPoint>
     {{#items}}
-    <navPoint id="nav-prologue">
+    <navPoint id="nav-{{id}}">
         <navLabel><text>{{label}}</text></navLabel>
         <content src="{{path}}"/>
     </navPoint>
     {{/items}}
+    <navPoint id="nav-yin-yang">
+        <navLabel><text>Yin and Yang</text></navLabel>
+        <content src="yin-yang.xhtml"/>
+    </navPoint>
 </navMap>
 </ncx>
