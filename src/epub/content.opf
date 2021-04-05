@@ -9,13 +9,19 @@
         <dc:language>{{language}}</dc:language>
         <dc:title id="title">{{title}}</dc:title>
             <meta refines="#title" property="title-type">main</meta>
+        {{#title_sort}}
             <meta refines="#title" property="file-as">{{title_sort}}</meta>
+        {{/title_sort}}
         <dc:creator id="creator">{{author}}</dc:creator>
             <meta refines="#creator" property="role" scheme="marc:relators">aut</meta>
+        {{#author_sort}}
             <meta refines="#creator" property="file-as">{{author_sort}}</meta>
+        {{/author_sort}}
         <dc:contributor id="translator">{{translator}}</dc:contributor>
             <meta refines="#translator" property="role" scheme="marc:relators">trl</meta>
+        {{#translator_sort}}
             <meta refines="#translator" property="file-as">{{translator_sort}}</meta>
+        {{/translator_sort}}
         <dc:description xml:lang="en">{{description}}</dc:description>
         <dc:type>Text</dc:type>
         <dc:subject>{{subject}}</dc:subject>
