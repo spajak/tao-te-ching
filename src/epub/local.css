@@ -45,6 +45,12 @@ blockquote > .stanza {
     margin-bottom: 2.75em;
 }
 
+.chapter-s {
+    text-align: center;
+    margin-top: 1em;
+    margin-bottom: 1.5em;
+}
+
 .chapter-1-2 {
     text-align: center;
     margin-top: 1.5em;

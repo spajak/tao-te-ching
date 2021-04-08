@@ -24,7 +24,9 @@
         {{/translator_sort}}
         <dc:description xml:lang="en">{{description}}</dc:description>
         <dc:type>Text</dc:type>
-        <dc:subject>{{subject}}</dc:subject>
+        {{#subjects}}
+        <dc:subject>{{.}}</dc:subject>
+        {{/subjects}}
         <meta id="series" property="belongs-to-collection">{{series}}</meta>
             <meta refines="#series" property="collection-type">series</meta>
         <!-- Publication info -->
@@ -49,6 +51,7 @@
         <item href="epub.xhtml" id="epub" media-type="application/xhtml+xml"/>
         <item href="toc.xhtml" id="toc" media-type="application/xhtml+xml" properties="nav"/>
         <item href="titlepage.xhtml" id="titlepage" media-type="application/xhtml+xml"/>
+        <item href="tao.svg" id="tao.svg" media-type="image/svg+xml"/>
         <item href="yin-yang.svg" id="yin-yang.svg" media-type="image/svg+xml"/>
         <item href="yin-yang.xhtml" id="yin-yang" media-type="application/xhtml+xml"/>
         <!-- Main content -->
