@@ -28,15 +28,42 @@ class Project:
     metadata = ROOT / "src" / "metadata.json"
     words_per_page = 260
 
+SECTIONS = {
+    'dedication': None,
+    'foreword': 'Foreword',
+    'preface': 'Preface',
+    'introduction': 'Introduction',
+    'epigraph': None,
+    'prologue': 'Prologue',
+    'chapter': None,
+    'epilogue': 'Epilogue',
+    'afterword': 'Afterword',
+    'footnotes': 'Notes',
+    'endnotes': 'Notes',
+    'appendix': 'Appendix',
+    'acknowledgments': 'Acknowledgments'
+}
+
+def get_section_order(type_):
+    if type_ not in SECTIONS:
+        raise Exception(f'Section type "{type_}" is not valid')
+    idx = list(SECTIONS.keys()).index(type_)
+    idx = str(idx).rjust(len(SECTIONS), '0')
+    return idx
+
 class Section:
     """Represents a translation section or chapter"""
-    def __init__(self, type_, id_=None):
+    def __init__(self, type_, id_):
         self.type = type_
-        self.id = id_ or self.type
+        self.id = id_
         self.title = None
-        self.language = "en"
+        self.language = None
         self.chapter = None
         self.body = None
+        self.word_count = 0
+    @property
+    def order(self):
+        return get_section_order(self.type) + self.id
     @property
     def label(self):
         return self.title if self.title else self.id.title()
@@ -163,32 +190,97 @@ def build(translation):
     create_cover(dir_, translation)
     create_epub(translation.name)
 
+class Processor:
+    def __init__(self, soup, default_lang=None):
+        self.soup = soup
+        self.default_lang = default_lang
+        self.processed = False
+    def sections(self):
+        self.process()
+        for section in self.soup.body('section', recursive=False):
+            so = Section(section['epub:type'], section['id'])
+            so.title = section['title']
+            so.language = section.get('lang') or self.default_lang
+            so.chapter = section.get('data-number')
+            so.word_count = self.get_word_count(section)
+            so.body = str(section)
+            yield so
+    def get_word_count(self, section):
+        counter = 0
+        for line in section.stripped_strings:
+            counter += len(re.findall(r'\w+', line))
+        return counter
+    def get_heading_title(self, section):
+        if section['epub:type'] == 'chapter':
+            return '– ' + section['title'] + ' –'
+        if SECTIONS[section['epub:type']] is None:
+            return None
+        return section['title']
+    def set_attributes(self, section):
+        type_ = section['epub:type']
+        if type_ not in SECTIONS:
+            raise Exception(f'Section type "{type_}" is not valid')
+        id_ = section.get('id')
+        if not id_:
+            id_ = type_
+            section['id'] = id_
+        title = section.get('title')
+        if type_ == 'chapter':
+            prefix, number = self.extract_numid(id_)
+            section['data-number'] = number
+            if not title:
+                section['title'] = str(number)
+        elif not title:
+            section['title'] = SECTIONS[type_] or id_.title()
+        return type_, id_
+    def process(self):
+        if self.processed:
+            return
+        for section in self.soup.body('section', recursive=False):
+            type_, id_ = self.set_attributes(section)
+            self.insert_heading(section)
+            if type_ in ('footnotes', 'endnotes'):
+                self.insert_notes_headings(section)
+        self.processed = True
+    def extract_numid(self, id_):
+        m = re.match(r'^(\w+)-(\d+)$', id_)
+        if not m:
+            raise Exception(f'Id value "{id_}" is not valid')
+        return m[1], int(m[2])
+    def insert_heading(self, section):
+        if section.h1 or section.h2:
+            return
+        title = self.get_heading_title(section)
+        if not title:
+            return
+        h2_tag = self.soup.new_tag('h2')
+        css_class = 'chapter' if section['epub:type'] == 'chapter' else 'chapter-big'
+        h2_tag.string = title
+        h2_tag['class'] = [css_class,]
+        section.insert(0, h2_tag)
+        section.insert(0, "\n")
+    def insert_footnotes(self, section):
+        pass
+    def insert_notes_headings(self, section):
+        def is_note(el):
+            if el.get('epub:type') not in ('footnote', 'endnote'):
+                return False
+            if not el.has_attr('id'):
+                return False
+            return bool(re.match('^(fn|en)-\d+$', el.get('id')))
+        for el in section.find_all(is_note, recursive=False):
+            prefix, number = self.extract_numid(el.get('id'))
+            h3_tag = self.soup.new_tag('h3')
+            h3_tag.string = str(number)
+            el.insert_before(h3_tag)
+            el.insert_before("\n")
+
 class Translations:
-    SECTIONS = {
-        'dedication': None,
-        'foreword': 'Foreword',
-        'preface': 'Preface',
-        'introduction': 'Introduction',
-        'epigraph': None,
-        'prologue': 'Prologue',
-        'chapter': None,
-        'epilogue': 'Epilogue',
-        'afterword': 'Afterword',
-        'footnotes': 'Notes',
-        'endnotes': 'Notes',
-        'appendix': 'Appendix',
-        'acknowledgments': 'Acknowledgments'
-    }
     def __init__(self, insert_titles=True, insert_footnotes=False):
         self.insert_titles = insert_titles
         self.insert_footnotes = insert_footnotes
         with open(Project.metadata) as md:
             self.metadata = json.load(md)
-    @classmethod
-    def section_sort_key(cls, section):
-        idx = list(cls.SECTIONS.keys()).index(section.type)
-        idx = str(idx).rjust(len(cls.SECTIONS), '0')
-        return idx + section.id
     def insert_title(self, el, title, type_, soup):
         if el.h1 or el.h2:
             return
@@ -229,23 +321,6 @@ class Translations:
             if k not in metadata:
                 metadata[k] = v
         return metadata
-    def extract_chapter(self, id_):
-        m = re.match(r'^ch-(\d+)$', id_)
-        if not m:
-            raise Exception(f'Chapter id value "{id_}" is not valid')
-        return int(m[1])
-    def extract_title(self, type_, id_):
-        if type_ not in self.SECTIONS:
-            raise Exception(f'Section type "{type_}" is not valid')
-        title = self.SECTIONS[type_]
-        if title is not None and id_ and id_ != type_:
-            title = id_.title()
-        return title
-    def count_words(self, lines):
-        counter = 0
-        for line in lines:
-            counter += len(re.findall(r'\w+', line))
-        return counter
     def get_items_from_sections(self, sections):
         items = []
         for section in sections:
@@ -258,6 +333,8 @@ class Translations:
     def create_record(self, metadata):
         record = Translation(metadata['uuid'])
         for k, v in metadata.items():
+            if k.startswith('_'):
+                continue
             if hasattr(record, k) and k != 'uuid':
                 setattr(record, k, v)
         return record
@@ -266,25 +343,13 @@ class Translations:
             soup = BeautifulSoup(fp, 'lxml')
             metadata = self.extract_metadata(soup)
             record = self.create_record(metadata)
+            proc = Processor(soup, record.language)
             sections = []
             word_count = 0
-            for item in soup.body('section'):
-                section = Section(item['epub:type'], item.get('id'))
-                if lang := item.get('lang'):
-                    section.language = lang
-                else:
-                    section.language = record.language
-                if section.type == 'chapter':
-                    section.chapter = self.extract_chapter(section.id)
-                    section.title = str(section.chapter)
-                else:
-                    section.title = self.extract_title(section.type, section.id)
-                if section.title and self.insert_titles:
-                    self.insert_title(item, section.title, section.type, soup)
-                section.body = str(item)
+            for section in proc.sections():
                 sections.append(section)
-                word_count += self.count_words(item.stripped_strings)
-            sections.sort(key=lambda s: Translations.section_sort_key(s))
+                word_count += section.word_count
+            sections.sort(key=lambda s: s.order)
             record.sections = sections
             if not record.word_count:
                 record.word_count = str(word_count)
