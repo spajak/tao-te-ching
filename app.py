@@ -190,6 +190,42 @@ def build(translation):
     create_cover(dir_, translation)
     create_epub(translation.name)
 
+class RereferceId:
+    CHAPTER = 'ch'
+    FOOTNOTE = 'fn'
+    ENDNOTE = 'en'
+    NOTEREF = 'nr'
+    BACKLINK = 'bl'
+    prefixes = (CHAPTER, FOOTNOTE, ENDNOTE, NOTEREF, BACKLINK)
+    def __init__(self, value):
+        self.prefix = None
+        self.snumber = None
+        self.sindex = None
+        self.parse(value)
+    @property
+    def number(self):
+        return None if self.snumber is None else int(self.snumber)
+    @property
+    def index(self):
+        return None if self.sindex is None else int(self.sindex)
+    def is_chapter(self):
+        return self.prefix == self.CHAPTER
+    def is_note(self):
+        return self.prefix in (self.FOOTNOTE, self.ENDNOTE)
+    def __str__(self):
+        result = f"{self.prefix}-{self.snumber}"
+        if self.snumber is not None:
+            return f"{result}-{self.sindex}"
+        return result
+    def parse(self, value):
+        prefixes = '|'.join(self.prefixes)
+        m = re.match(fr'^({prefixes})-(\d+)(?:-(\d+))?$', value)
+        if not m:
+            raise Exception(f'Reference id value "{value}" is not valid')
+        self.prefix = m[1]
+        self.snumber = m[2]
+        self.sindex = m[3]
+
 class Processor:
     def __init__(self, soup, default_lang=None):
         self.soup = soup
@@ -226,10 +262,11 @@ class Processor:
             section['id'] = id_
         title = section.get('title')
         if type_ == 'chapter':
-            prefix, number = self.extract_numid(id_)
-            section['data-number'] = number
+            refid = RereferceId(id_)
+            assert refid.is_chapter()
+            section['data-number'] = refid.number
             if not title:
-                section['title'] = str(number)
+                section['title'] = str(refid.number)
         elif not title:
             section['title'] = SECTIONS[type_] or id_.title()
         return type_, id_
@@ -242,11 +279,6 @@ class Processor:
             if type_ in ('footnotes', 'endnotes'):
                 self.insert_notes_headings(section)
         self.processed = True
-    def extract_numid(self, id_):
-        m = re.match(r'^(\w+)-(\d+)$', id_)
-        if not m:
-            raise Exception(f'Id value "{id_}" is not valid')
-        return m[1], int(m[2])
     def insert_heading(self, section):
         if section.h1 or section.h2:
             return
@@ -265,13 +297,12 @@ class Processor:
         def is_note(el):
             if el.get('epub:type') not in ('footnote', 'endnote'):
                 return False
-            if not el.has_attr('id'):
-                return False
-            return bool(re.match('^(fn|en)-\d+$', el.get('id')))
+            return el.has_attr('id')
         for el in section.find_all(is_note, recursive=False):
-            prefix, number = self.extract_numid(el.get('id'))
+            refid = RereferceId(el.get('id'))
+            assert refid.is_note()
             h3_tag = self.soup.new_tag('h3')
-            h3_tag.string = str(number)
+            h3_tag.string = str(refid.number)
             el.insert_before(h3_tag)
             el.insert_before("\n")
 
@@ -281,18 +312,6 @@ class Translations:
         self.insert_footnotes = insert_footnotes
         with open(Project.metadata) as md:
             self.metadata = json.load(md)
-    def insert_title(self, el, title, type_, soup):
-        if el.h1 or el.h2:
-            return
-        h2_tag = soup.new_tag('h2')
-        css_class = 'chapter'
-        if type_ == 'chapter':
-            title = '– ' + title + ' –'
-            css_class = 'chapter-s'
-        h2_tag.string = title
-        h2_tag['class'] = [css_class,]
-        el.insert(0, h2_tag)
-        el.insert(0, "\n")
     def get_default_metadata(self, title, author=None, language=None):
         for md in self.metadata:
             if md['title'] != title:
