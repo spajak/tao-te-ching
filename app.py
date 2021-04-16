@@ -8,7 +8,7 @@ import pystache as mustache
 from PIL import Image, ImageDraw, ImageFont
 
 def main():
-    id_ = '01 - Stephen Mitchell.xhtml'
+    id_ = '04 - Derek Lin.xhtml'
     for f in Project.text_files:
         if f.name == id_:
             tr = Translations().load(f)
@@ -23,6 +23,8 @@ class Project:
     tmpl_files = tmpl_dir.glob('*.*')
     tmpl_suffixes = ('.opf', '.xhtml', '.ncx')
     tmpl_section = 'section.xhtml'
+    section_dir_name = 'text'
+    section_suffix = '.xhtml'
     cover_src = ROOT / "src" / "cover" / "cover.png"
     cover_font = ROOT / "src" / "cover" / "EBGaramond-SemiBold.ttf"
     metadata = ROOT / "src" / "metadata.json"
@@ -70,6 +72,12 @@ class Section:
     @property
     def html_title(self):
         return self.label
+    @property
+    def filename(self):
+        return self.id + Project.section_suffix
+    @property
+    def path(self):
+        return Project.section_dir_name + '/' + self.filename
 
 class Translation:
     """Represents a translation document"""
@@ -81,7 +89,6 @@ class Translation:
         self.translator = None
         self.year = None
         self.sections = []
-        self.items = []
         self.toc_title = None
         self.cover_label = None
         self.source = "https://github.com/spajak/tao-te-ching"
@@ -135,7 +142,8 @@ def create_directory_structure(name):
         with open(fpath, 'w', encoding='utf-8') as fp:
             fp.write(data.lstrip())
     dir_ = dir_ / EpubPackage.content_dir
-    dir_.mkdir(parents=True, exist_ok=True)
+    sdir = dir_ / Project.section_dir_name
+    sdir.mkdir(parents=True, exist_ok=True)
     return dir_
 
 def create_epub(name):
@@ -163,7 +171,7 @@ def create_cover(dst_dir, translation):
 def build(translation):
     dir_ = create_directory_structure(translation.name)
     def write(fname, content):
-        output = dir_ / fname
+        output = dir_ / Path(fname)
         with open(output, 'w', encoding='utf-8') as of:
             of.write(content)
     def is_tmpl(name):
@@ -186,7 +194,7 @@ def build(translation):
     if section_template:
         for section in translation.sections:
             rendered = mustache.render(section_template, section)
-            write(section.id + '.xhtml', rendered)
+            write(section.path, rendered)
     create_cover(dir_, translation)
     create_epub(translation.name)
 
@@ -197,6 +205,11 @@ class RereferceId:
     NOTEREF = 'nr'
     BACKLINK = 'bl'
     prefixes = (CHAPTER, FOOTNOTE, ENDNOTE, NOTEREF, BACKLINK)
+    secmap = {
+        'fn': 'endnotes',
+        'en': 'endnotes',
+        'nr': 'chapter'
+    }
     def __init__(self, value):
         self.prefix = None
         self.snumber = None
@@ -231,21 +244,42 @@ class Processor:
         self.soup = soup
         self.default_lang = default_lang
         self.processed = False
+        self.sids = {}
     def sections(self):
         self.process()
-        for section in self.soup.body('section', recursive=False):
+        for section in self._sections():
             so = Section(section['epub:type'], section['id'])
             so.title = section['title']
             so.language = section.get('lang') or self.default_lang
             so.chapter = section.get('data-number')
             so.word_count = self.get_word_count(section)
+            for a in section.find_all('a'):
+                if href := a.get('href'):
+                    shref = self.make_section_href(href)
+                    if shref:
+                        a['href'] = shref
             so.body = str(section)
             yield so
+    def _sections(self):
+        for section in self.soup.body('section', recursive=False):
+            type_ = section.get('epub:type')
+            if not type_:
+                raise Exception(f'Section without "epub:type" attribute in body section')
+            if type_ not in SECTIONS:
+                raise Exception(f'Section type "{type_}" is not valid')
+            yield section
     def get_word_count(self, section):
         counter = 0
         for line in section.stripped_strings:
             counter += len(re.findall(r'\w+', line))
         return counter
+    def make_section_href(self, href):
+        if '#' in href:
+            href = href.split('#', 1)[1]
+        for sid, ids in self.sids.items():
+            if href in ids or href == sid:
+                return f'{sid}{Project.section_suffix}#{href}'
+        return None
     def get_heading_title(self, section):
         if section['epub:type'] == 'chapter':
             return '– ' + section['title'] + ' –'
@@ -254,8 +288,6 @@ class Processor:
         return section['title']
     def set_attributes(self, section):
         type_ = section['epub:type']
-        if type_ not in SECTIONS:
-            raise Exception(f'Section type "{type_}" is not valid')
         id_ = section.get('id')
         if not id_:
             id_ = type_
@@ -273,8 +305,9 @@ class Processor:
     def process(self):
         if self.processed:
             return
-        for section in self.soup.body('section', recursive=False):
+        for section in self._sections():
             type_, id_ = self.set_attributes(section)
+            self.sids[id_] = [e.get('id') for e in section.find_all(id=True)]
             self.insert_heading(section)
             if type_ in ('footnotes', 'endnotes'):
                 self.insert_notes_headings(section)
@@ -291,16 +324,18 @@ class Processor:
         h2_tag['class'] = [css_class,]
         section.insert(0, h2_tag)
         section.insert(0, "\n")
-    def insert_footnotes(self, section):
-        pass
     def insert_notes_headings(self, section):
         def is_note(el):
             if el.get('epub:type') not in ('footnote', 'endnote'):
                 return False
             return el.has_attr('id')
+        seen = {}
         for el in section.find_all(is_note, recursive=False):
             refid = RereferceId(el.get('id'))
             assert refid.is_note()
+            if refid.number in seen:
+                continue
+            seen[refid.number] = True
             h3_tag = self.soup.new_tag('h3')
             h3_tag.string = str(refid.number)
             el.insert_before(h3_tag)
@@ -340,15 +375,6 @@ class Translations:
             if k not in metadata:
                 metadata[k] = v
         return metadata
-    def get_items_from_sections(self, sections):
-        items = []
-        for section in sections:
-            items.append({
-                'id': section.id,
-                'label': section.label,
-                'path': section.id + '.xhtml'
-            })
-        return items
     def create_record(self, metadata):
         record = Translation(metadata['uuid'])
         for k, v in metadata.items():
@@ -374,7 +400,6 @@ class Translations:
                 record.word_count = str(word_count)
             if not record.number_of_pages:
                 record.number_of_pages = str(int(record.word_count) // Project.words_per_page)
-            record.items = self.get_items_from_sections(sections)
             return record
 
 if __name__ == '__main__':

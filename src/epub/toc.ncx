@@ -13,12 +13,12 @@
         <navLabel><text>{{cover_label}}</text></navLabel>
         <content src="cover.xhtml"/>
     </navPoint>
-    {{#items}}
+    {{#sections}}
     <navPoint id="nav-{{id}}">
         <navLabel><text>{{label}}</text></navLabel>
         <content src="{{path}}"/>
     </navPoint>
-    {{/items}}
+    {{/sections}}
     <navPoint id="nav-yin-yang">
         <navLabel><text>Yin and Yang</text></navLabel>
         <content src="yin-yang.xhtml"/>

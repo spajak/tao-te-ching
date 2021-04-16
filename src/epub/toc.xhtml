@@ -4,7 +4,7 @@
 <head>
     <title>{{title}}</title>
     <meta charset="utf-8"/>
-    <link href="local.css" rel="stylesheet" type="text/css"/>
+    <link href="style.css" rel="stylesheet" type="text/css"/>
 </head>
 <body epub:type="frontmatter">
 
@@ -13,9 +13,9 @@
 <h2 class="c m-1">{{toc_title}}</h2>
 
 <ol>
-    {{#items}}
+    {{#sections}}
     <li><a href="{{path}}">{{label}}</a></li>
-    {{/items}}
+    {{/sections}}
     <li><a href="yin-yang.xhtml">Yin and Yang</a></li>
 </ol>
 

@@ -45,7 +45,6 @@
         <item href="cover.jpg" id="cover.jpg" media-type="image/jpeg" properties="cover-image"/>
         <item href="cover.xhtml" id="cover" media-type="application/xhtml+xml"/>
         <item href="style.css" id="style.css" media-type="text/css"/>
-        <item href="local.css" id="local.css" media-type="text/css"/>
         <item href="toc.ncx" id="ncx" media-type="application/x-dtbncx+xml"/>
         <item href="epub.svg" id="epub.svg" media-type="image/svg+xml"/>
         <item href="epub.xhtml" id="epub" media-type="application/xhtml+xml"/>
@@ -55,18 +54,18 @@
         <item href="yin-yang.svg" id="yin-yang.svg" media-type="image/svg+xml"/>
         <item href="yin-yang.xhtml" id="yin-yang" media-type="application/xhtml+xml"/>
         <!-- Main content -->
-        {{#items}}
+        {{#sections}}
         <item href="{{path}}" id="{{id}}" media-type="application/xhtml+xml"/>
-        {{/items}}
+        {{/sections}}
     </manifest>
     <spine toc="ncx">
         <itemref idref="cover"/>
         <itemref idref="titlepage"/>
         <itemref idref="epub"/>
         <itemref idref="toc"/>
-        {{#items}}
+        {{#sections}}
         <itemref idref="{{id}}"/>
-        {{/items}}
+        {{/sections}}
         <itemref idref="yin-yang"/>
     </spine>
 </package>
