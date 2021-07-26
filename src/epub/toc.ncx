@@ -6,12 +6,12 @@
     <meta content="0" name="dtb:totalPageCount"/>
     <meta content="0" name="dtb:maxPageNumber"/>
 </head>
-<docTitle><text>{{title}}</text></docTitle>
-<docAuthor><text>{{author}}</text></docAuthor>
+<docTitle><text>Tao Te Ching</text></docTitle>
+<docAuthor><text>Lao Tzu</text></docAuthor>
 <navMap>
     <navPoint id="nav-cover">
-        <navLabel><text>{{cover_label}}</text></navLabel>
-        <content src="cover.xhtml"/>
+        <navLabel><text>Cover</text></navLabel>
+        <content src="Content/cover.xhtml"/>
     </navPoint>
     {{#sections}}
     <navPoint id="nav-{{id}}">
@@ -21,7 +21,7 @@
     {{/sections}}
     <navPoint id="nav-yin-yang">
         <navLabel><text>Yin and Yang</text></navLabel>
-        <content src="yin-yang.xhtml"/>
+        <content src="Content/yin-yang.xhtml"/>
     </navPoint>
 </navMap>
 </ncx>

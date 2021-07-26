@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE html>
-<html lang="{{language}}" xml:lang="{{language}}" xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
+<html lang="en" xml:lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
 <head>
-    <title>{{title}}</title>
+    <title>Table of contents</title>
     <meta charset="utf-8"/>
     <link href="style.css" rel="stylesheet" type="text/css"/>
 </head>
@@ -10,12 +10,12 @@
 
 <nav epub:type="toc">
 
-<h2 class="c m-1">{{toc_title}}</h2>
+<h2 class="c m-1">Table of contents</h2>
 
 <ol>
-    {{#sections}}
+    {{#translations}}
     <li><a href="{{path}}">{{label}}</a></li>
-    {{/sections}}
+    {{/translations}}
     <li><a href="yin-yang.xhtml">Yin and Yang</a></li>
 </ol>
 

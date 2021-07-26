@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://www.idpf.org/2007/opf" unique-identifier="pub-id" version="3.0">
+    <!-- https://github.com/spajak/epub3-boilerplate -->
+    <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+        <dc:identifier id="pub-id">urn:uuid:{{uuid}}</dc:identifier>
+        <meta property="dcterms:modified">{{date_modified}}</meta>
+        <dc:source>https://github.com/spajak/tao-te-ching</dc:source>
+        <dc:language>{{language}}</dc:language>
+        <dc:title id="title">{{title}}</dc:title>
+            <meta refines="#title" property="title-type">main</meta>
+        <dc:creator id="creator">{{author}}</dc:creator>
+            <meta refines="#creator" property="role" scheme="marc:relators">aut</meta>
+        {{#translations}}
+        <dc:contributor id="translator-{{uuid}}">{{translator}}</dc:contributor>
+            <meta refines="#translator-{{uuid}}" property="role" scheme="marc:relators">trl</meta>
+        {{/translations}}
+        <dc:description xml:lang="en">The Tao Te Ching was written in China roughly 2,500 years ago at about the same time when Buddha expounded the Dharma in India and Pythagoras taught in Greece. The Tao Te Ching is probably the most influential Chinese book of all times. Its 81 chapters have been translated into English more times than any other Chinese document. The Tao Te Ching provides the basis for the philosophical school of Taoism, which is an important pillar of Chinese thought.</dc:description>
+        <dc:subject>Philosophy</dc:subject>
+        <dc:subject>Taoism</dc:subject>
+        <meta id="series" property="belongs-to-collection">Taoism</meta>
+            <meta refines="#series" property="collection-type">series</meta>
+        <!-- Publication info -->
+        <dc:publisher>Self-publishing</dc:publisher>
+        <dc:date>{{date}}</dc:date>
+        <meta property="schema:numberOfPages">{{number_of_pages}}</meta>
+        <!-- The person who created this e-book package -->
+        <dc:contributor id="producer">Sebastian Pająk</dc:contributor>
+            <meta refines="#producer" property="role" scheme="marc:relators">bkp</meta>
+        <!-- Read time tip: an adult reads about 250 words per minute on an average -->
+        <meta property="schema:wordCount">{{word_count}}</meta>
+        <!-- ePub 2 cover -->
+        <meta name="cover" content="cover.jpg"/>
+    </metadata>
+    <manifest>
+        <item href="Content/images/cover.jpg" id="cover.jpg" media-type="image/jpeg" properties="cover-image"/>
+        <item href="Content/cover.xhtml" id="cover" media-type="application/xhtml+xml"/>
+        <item href="Content/style/base.css" id="base.css" media-type="text/css"/>
+        <item href="Content/style/titlepage.css" id="titlepage.css" media-type="text/css"/>
+        <item href="Content/style/main.css" id="main.css" media-type="text/css"/>
+        <item href="Content/style/cover.css" id="cover.css" media-type="text/css"/>
+        <item href="Content/images/epub.svg" id="epub.svg" media-type="image/svg+xml"/>
+        <item href="Content/epub.xhtml" id="epub" media-type="application/xhtml+xml"/>
+        <item href="Content/images/tao.svg" id="tao.svg" media-type="image/svg+xml"/>
+        <item href="Content/images/yin-yang.svg" id="yin-yang.svg" media-type="image/svg+xml"/>
+        <item href="Content/yin-yang.xhtml" id="yin-yang" media-type="application/xhtml+xml"/>
+        <item href="Content/toc.xhtml" id="toc" media-type="application/xhtml+xml" properties="nav"/>
+        <item href="Content/titlepage.xhtml" id="titlepage" media-type="application/xhtml+xml"/>
+        <item href="toc.ncx" id="ncx" media-type="application/x-dtbncx+xml"/>
+        <!-- Main content -->
+        {{#sections}}
+        <item href="{{path}}" id="{{id}}" media-type="application/xhtml+xml"/>
+        {{/sections}}
+    </manifest>
+    <spine toc="ncx">
+        <itemref idref="cover"/>
+        <itemref idref="titlepage"/>
+        <itemref idref="epub"/>
+        <itemref idref="toc"/>
+        {{#sections}}
+        <itemref idref="{{id}}"/>
+        {{/sections}}
+        <itemref idref="yin-yang"/>
+    </spine>
+</package>
