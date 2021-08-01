@@ -11,10 +11,11 @@
         <dc:creator id="creator">{{author}}</dc:creator>
             <meta refines="#creator" property="role" scheme="marc:relators">aut</meta>
         {{#translations}}
-        <dc:contributor id="translator-{{uuid}}">{{translator}}</dc:contributor>
-            <meta refines="#translator-{{uuid}}" property="role" scheme="marc:relators">trl</meta>
+        <dc:contributor id="translator-{{prefix}}">{{translator}}</dc:contributor>
+            <meta refines="#translator-{{prefix}}" property="role" scheme="marc:relators">trl</meta>
         {{/translations}}
         <dc:description xml:lang="en">The Tao Te Ching was written in China roughly 2,500 years ago at about the same time when Buddha expounded the Dharma in India and Pythagoras taught in Greece. The Tao Te Ching is probably the most influential Chinese book of all times. Its 81 chapters have been translated into English more times than any other Chinese document. The Tao Te Ching provides the basis for the philosophical school of Taoism, which is an important pillar of Chinese thought.</dc:description>
+       <dc:description xml:lang="pl">Tao Te Ching znany również jako „Laozi wuqian wen”, czyli „Księga 5000 znaków Laozi” jest starożytnym chińskim traktatem filozoficznym, będącym podstawą kanonu filozofii określanej mianem taoizmu. Napisany w VI wieku p.n.e. – czyli ponad 2500 lat temu – jest jednym z najważniejszych (o ile nie najważniejszym) tekstów w długiej historii Chin. Autorstwo „Księgi Drogi i Cnoty” przypisuje się mędrcowi Laozi (imię to oznacza: „Stary Mistrz”), archiwiście biblioteki państwowej z czasów Dynastii Zhou.</dc:description>
         <dc:subject>Philosophy</dc:subject>
         <dc:subject>Taoism</dc:subject>
         <meta id="series" property="belongs-to-collection">Taoism</meta>
@@ -22,6 +23,7 @@
         <!-- Publication info -->
         <dc:publisher>Self-publishing</dc:publisher>
         <dc:date>{{date}}</dc:date>
+        <meta property="schema:version">{{version}}</meta>
         <meta property="schema:numberOfPages">{{number_of_pages}}</meta>
         <!-- The person who created this e-book package -->
         <dc:contributor id="producer">Sebastian Pająk</dc:contributor>
@@ -29,10 +31,10 @@
         <!-- Read time tip: an adult reads about 250 words per minute on an average -->
         <meta property="schema:wordCount">{{word_count}}</meta>
         <!-- ePub 2 cover -->
-        <meta name="cover" content="cover.jpg"/>
+        <meta name="cover" content="cover.png"/>
     </metadata>
     <manifest>
-        <item href="Content/images/cover.jpg" id="cover.jpg" media-type="image/jpeg" properties="cover-image"/>
+        <item href="Content/images/cover.png" id="cover.png" media-type="image/png" properties="cover-image"/>
         <item href="Content/cover.xhtml" id="cover" media-type="application/xhtml+xml"/>
         <item href="Content/style/base.css" id="base.css" media-type="text/css"/>
         <item href="Content/style/titlepage.css" id="titlepage.css" media-type="text/css"/>
@@ -47,18 +49,18 @@
         <item href="Content/titlepage.xhtml" id="titlepage" media-type="application/xhtml+xml"/>
         <item href="toc.ncx" id="ncx" media-type="application/x-dtbncx+xml"/>
         <!-- Main content -->
-        {{#sections}}
-        <item href="{{path}}" id="{{id}}" media-type="application/xhtml+xml"/>
-        {{/sections}}
+        {{#items}}
+        <item href="Content/{{path}}" id="{{id}}" media-type="application/xhtml+xml"/>
+        {{/items}}
     </manifest>
     <spine toc="ncx">
         <itemref idref="cover"/>
         <itemref idref="titlepage"/>
-        <itemref idref="epub"/>
         <itemref idref="toc"/>
-        {{#sections}}
+        {{#items}}
         <itemref idref="{{id}}"/>
-        {{/sections}}
+        {{/items}}
         <itemref idref="yin-yang"/>
+        <itemref idref="epub"/>
     </spine>
 </package>

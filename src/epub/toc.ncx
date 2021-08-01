@@ -13,12 +13,18 @@
         <navLabel><text>Cover</text></navLabel>
         <content src="Content/cover.xhtml"/>
     </navPoint>
-    {{#sections}}
+    {{#toc}}
     <navPoint id="nav-{{id}}">
-        <navLabel><text>{{label}}</text></navLabel>
-        <content src="{{path}}"/>
+        <navLabel><text>{{translator}}</text></navLabel>
+        <content src="Content/{{path}}"/>
+        {{#chapters}}
+        <navPoint id="nav-{{id}}">
+            <navLabel><text>{{title}}</text></navLabel>
+            <content src="Content/{{path}}"/>
+        </navPoint>
+        {{/chapters}}
     </navPoint>
-    {{/sections}}
+    {{/toc}}
     <navPoint id="nav-yin-yang">
         <navLabel><text>Yin and Yang</text></navLabel>
         <content src="Content/yin-yang.xhtml"/>

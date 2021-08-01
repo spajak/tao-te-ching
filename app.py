@@ -4,12 +4,13 @@ from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 from zipfile import ZipFile, ZIP_DEFLATED, ZIP_STORED
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 import pystache as mustache
 from PIL import Image, ImageDraw, ImageFont
+from slugify import slugify
 
 class Project:
-    ROOT = Path(__file__).parent
+    ROOT = Path(__file__).parent.resolve(strict=True)
     text_dir = ROOT / "src" / "text"
     tmpl_dir = ROOT / "src" / "epub"
     dist_dir = ROOT / "dist"
@@ -21,6 +22,7 @@ class Project:
     section_dir_name = 'text'
     section_suffix = '.xhtml'
     chapter_section_name = 'chapters'
+    chapters_title = 'Chapters'
     cover_src = ROOT / "src" / "cover" / "cover.png"
     cover_font = ROOT / "src" / "cover" / "EBGaramond-SemiBold.ttf"
     words_per_page = 260
@@ -33,32 +35,30 @@ def is_template(path):
             return True
     return False
 
-class Builder:
-    def __init__(self):
-        pass
-
 def main():
     book = Book()
     for p in Project.text_files:
         tr = parse(p)
+        process(tr)
         book.add(tr)
+    book.sort()
     build(book)
 
-
 class SectionType(Enum):
-    dedication = 0
-    foreword = 1
-    preface = 2
-    introduction = 3
-    epigraph = 4
-    prologue = 5
-    chapter = 6
-    epilogue = 7
-    afterword = 8
-    endnotes = 9
-    appendix = 10
-    bibliography = 11
-    acknowledgments = 12
+    contributor = 0
+    dedication = 1
+    foreword = 2
+    preface = 3
+    introduction = 4
+    epigraph = 5
+    prologue = 6
+    chapter = 7
+    epilogue = 8
+    afterword = 9
+    endnotes = 10
+    appendix = 11
+    bibliography = 12
+    acknowledgments = 13
     @classmethod
     def create(cls, name):
         for item in cls:
@@ -88,8 +88,8 @@ class EpubSectionDoc:
 <head>
     <title>{title}</title>
     <meta charset="utf-8"/>
-    <link href="style/base.css" rel="stylesheet" type="text/css"/>
-    <link href="style/main.css" rel="stylesheet" type="text/css"/>
+    <link href="../style/base.css" rel="stylesheet" type="text/css"/>
+    <link href="../style/main.css" rel="stylesheet" type="text/css"/>
 </head>
 <body epub:type="bodymatter">
 '''
@@ -98,12 +98,13 @@ class EpubSectionDoc:
 </html>
 '''
     def __init__(self, path, language, title):
-        self.path = path
+        self.path = Path(path)
         self.file = None
         self.language = language
         self.title = title
     def acquire(self):
         if not self.file:
+            self.path.parent.mkdir(parents=True, exist_ok=True)
             self.file = open(self.path, 'w', encoding='utf-8', newline='')
             self.file.write(self.header + "\n")
         return self.file
@@ -111,10 +112,10 @@ class EpubSectionDoc:
         self.acquire().write(value + "\n")
     @property
     def header(self):
-        return self.header.format(
+        return self.header_.format(
             language=self.language,
             title=self.title
-        ).strip()
+        ).strip().replace('&', '&amp;')
     @property
     def footer(self):
         return self.footer_.strip()
@@ -132,6 +133,7 @@ class EpubSectionDoc:
 
 class Metadata:
     uuid = "a8f161cf-2ea4-4d4c-bdc5-1be41d7b9fd3"
+    version = "1.0.0"
     language = "en"
     title = "Tao Te Ching"
     author = "Lao Tzu"
@@ -145,6 +147,53 @@ class Book(Metadata):
     def add(self, translation):
         translation.book = self
         self.translations.append(translation)
+    def sort(self):
+        for tr in self.translations:
+            tr.sort()
+        self.translations.sort(key=lambda x: x.prefix)
+    def items(self):
+        css_class = None
+        for tr in self.translations:
+            seen = set()
+            for s in tr.sections:
+                filename = s.filename
+                if filename in seen:
+                    continue
+                seen.add(filename)
+                sid = Project.chapter_section_name if s.is_chapter() else s.id
+                yield {
+                    "path": f'{tr.dirname}/{filename}',
+                    "id": f'tr-{tr.prefix}_{sid}',
+                    "title": s.label,
+                    "translator": tr.translator,
+                    "css_class": css_class
+                }
+                css_class = None
+            css_class = 'm-li'
+    def toc(self):
+        def chapters(tr):
+            seen = set()
+            for s in tr.sections:
+                if s.type is SectionType.contributor:
+                    continue
+                filename = s.filename
+                if filename in seen:
+                    continue
+                seen.add(filename)
+                sid = Project.chapter_section_name if s.is_chapter() else s.id
+                yield {
+                    "path": f'{tr.dirname}/{filename}',
+                    "id": f'tr-{tr.prefix}_{sid}',
+                    "title": s.label
+                }
+        for tr in self.translations:
+            yield {
+                "chapters": chapters(tr),
+                "path": f'{tr.dirname}/contributor.xhtml',
+                "id": f'tr-{tr.prefix}_contributor',
+                "translator": tr.translator
+            }
+
     @property
     def word_count(self):
         count = 0
@@ -166,11 +215,18 @@ class Translation:
         self.year = None
         self.prefix = Project.default_prefix
         self.sections = []
+    def add(self, section):
+        section.translation = self
+        if not section.language:
+            section.language = self.language
+        self.sections.append(section)
+    def sort(self):
+        self.sections.sort(key=lambda s: s.order)
     def __str__(self):
         return f'{self.prefix} - {self.translator} ({self.year})'
     @property
     def dirname(self):
-        return f'{self.prefix} - {self.translator}'
+        return slugify(f'{self.prefix} - {self.translator}')
     @property
     def path(self):
         return Path(self.dirname)
@@ -182,6 +238,13 @@ class Translation:
         for s in self.sections:
             if s.type is not SectionType.chapter:
                 yield s
+    def file_sections(self):
+        seen = set()
+        for s in self.sections:
+            if s.filename in seen:
+                continue
+            seen.add(s.filename)
+            yield s
     @property
     def word_count(self):
         counter = 0
@@ -215,8 +278,15 @@ class Section:
             return str(self.element)
         return ""
     @property
+    def label(self):
+        return ("Rozdziały" if self.language == 'pl' else Project.chapters_title) \
+            if self.is_chapter() else self.title
+    @property
+    def number_padded(self):
+        return str(self.number).rjust(2, '0')
+    @property
     def order(self):
-        return str(self.type.value) + str(self.number)
+        return 1000 * self.type.value + self.number
     @property
     def filename(self):
         return (Project.chapter_section_name if self.is_chapter() else self.id) \
@@ -225,7 +295,7 @@ class Section:
     def path(self):
         if not self.translation:
             return Path(self.filename)
-        return Path(self.translation.dirname) / self.filename
+        return self.translation.path / self.filename
     def __str__(self):
         return self.body
     def is_chapter(self):
@@ -249,6 +319,16 @@ def build_template(book, src, dst):
             dfp.write(rendered)
 
 def build_book(book, dst):
+    def create_index_html(translation):
+        index = create_index_element(translation, False)
+        stag = Tag(name='section')
+        stag['epub:type'] = 'chapter'
+        stag['class'] = ['bra']
+        h2tag = Tag(name='h2')
+        h2tag.string = f'{translation.translator} ({translation.year})'
+        h2tag['class'] = ['translator']
+        stag.append(h2tag)
+        return str(index.wrap(stag))
     cdst = dst / 'Content'
     for translation in book.translations:
         first_chapter = None
@@ -259,16 +339,15 @@ def build_book(book, dst):
             continue
         tdst = cdst / translation.dirname
         path = tdst / first_chapter.filename
-        path.mkdir(parents=True, exist_ok=True)
         language = first_chapter.language or translation.language
         with EpubSectionDoc(path, language, translation.title) as doc:
+            doc.append(create_index_html(translation))
             for ch in translation.chapters():
                 doc.append(ch.body)
         for section in translation.non_chapters():
             path = tdst / section.filename
-            path.mkdir(parents=True, exist_ok=True)
             language = section.language or translation.language
-            title = f'{section.title} - {translation.title}'
+            title = f'{section.label} - {translation.title}'
             with EpubSectionDoc(path, language, title) as doc:
                 doc.append(section.body)
 
@@ -286,8 +365,12 @@ def build(book):
         shutil.rmtree(destination)
     destination.mkdir(parents=True, exist_ok=True)
     for src in Project.tmpl_files:
+        if not src.is_file():
+            continue
         dst = destination / (src.relative_to(Project.tmpl_dir))
         dst.parent.mkdir(parents=True, exist_ok=True)
+        print(str(src))
+        print(str(dst))
         if is_template(src):
             build_template(book, src, dst)
         else:
@@ -296,9 +379,22 @@ def build(book):
     #build_epub(destination)
 
 def process(translation):
+    def create_chapter_tag(section, class_='ch'):
+        tag = Tag(name='h2')
+        tag.string = section.number_padded
+        tag['id'] = 'h-' + section.id
+        tag['class'] = [class_]
+        return tag
     def extract_id(a):
         href = a.get('href', '').strip()
         return (href[1:] if href[0] == '#' else href) if href else ''
+    id_map = {}
+    for section in translation.sections:
+        id_map[section.element.get('id')] = section.filename
+        for e in section.element.find_all(id=True):
+            if id_ := e.get('id'):
+                if id_ not in id_map:
+                    id_map[id_] = section.filename
     for section in translation.sections:
         for a in section.element.find_all('a'):
             href_id = extract_id(a)
@@ -306,12 +402,73 @@ def process(translation):
                 continue
             if href_id == section.id:
                 continue
-            for s in translation.sections:
-                if s is section:
-                    continue
-                if s.has_id(href_id):
-                    a['href'] = f'{s.filename}#{href_id}'
-                    break
+            if href_id in id_map:
+                href_filename = id_map[href_id]
+                if href_filename != section.filename:
+                    if href_id.startswith('ch-'):
+                        href_id = 'h-' + href_id
+                    a['href'] = f'{href_filename}#{href_id}'
+        if section.is_chapter():
+            section.element['class'] = ['bra']
+            section.element.insert(0, create_chapter_tag(section))
+    translation.sort()
+    translation.add(create_translator_section(translation))
+
+def create_index_element(translation, with_filename=True):
+    html  = '<div class="index">\n'
+    for ch in translation.chapters():
+        href = ch.filename if with_filename else ''
+        html += f'<a href="{href}#h-{ch.id}">{ch.number_padded}</a>\n';
+    html += '</div>'
+    return BeautifulSoup(html, 'lxml').div
+
+def create_menu_element(translation):
+    html  = '<ol class="latin">\n'
+    for s in translation.file_sections():
+        if s.type is SectionType.contributor:
+            continue
+        html += f'<li><a href="{s.filename}">{s.label}</a></li>\n';
+    html += '</ol>'
+    return BeautifulSoup(html, 'lxml').ol
+
+def create_translator_section(translation):
+    template = '''
+<section epub:type="contributor" title="{translator}">
+<h2 class="translator">{translator} ({year})</h2>
+</section>
+'''
+    html = template.format(
+        translator=translation.translator,
+        year=translation.year
+    )
+    html = html.replace('&', '&amp;')
+    element = BeautifulSoup(html, 'lxml').section
+    element.append(create_menu_element(translation))
+    section = create_section_from_element(element)
+    section.language = translation.language
+    return section
+
+def create_section_from_element(element):
+    type_ = element.get('epub:type')
+    if not type_:
+        raise Exception(f'Section without "epub:type" attribute')
+    type_ = SectionType.create(type_)
+    if not element.get('id'):
+        if type_ is SectionType.chapter:
+            raise Exception(f'Chapter section without "id" attribute')
+        element['id'] = type_.name
+    section = Section(type_)
+    section.language = element.get('lang')
+    section.element = element.extract()
+    if section.is_chapter():
+        if m := re.match(r'ch-(\d+)', section.id):
+            section.number = int(m[1])
+        else:
+            raise Exception(f'Chapter section with invalid "id" attribute')
+    if not section.element.get('title'):
+        section.element['title'] = str(section.number) \
+            if section.is_chapter() else section.id.title()
+    return section
 
 def parse(path, default_metadata=None):
     def set_metadata(translation, soup):
@@ -319,51 +476,31 @@ def parse(path, default_metadata=None):
             for key in ('language', 'title', 'author'):
                 if value := getattr(default_metadata, key, None):
                     setattr(translation, key, value)
-        translation.language = soup.html.get('lang')
-        translation.title = soup.head.title.string
+        if lang := soup.html.get('lang'):
+            translation.language = lang
+        head = soup.head
+        if head.title.string:
+            translation.title = head.title.string
         for meta in soup.head.find_all('meta'):
             if name := meta.get('name'):
                 if hasattr(translation, name):
                     if (value := meta.get('content')) is not None:
                         setattr(translation, name, value)
-    def finalize_section(section):
-        section.language = section.element.get('lang')
-        if not section.element.get('title'):
-            section.element['title'] = str(section.number) \
-                if section.is_chapter() else section.id.title()
-    def create_sections(soup):
+    def add_sections(translation, soup):
         for element in soup.body('section', recursive=False):
-            type_ = element.get('epub:type')
-            if not type_:
-                raise Exception(f'Section without "epub:type" attribute')
-            type_ = SectionType.create(type_)
-            if not element.get('id'):
-                if type_ is SectionType.chapter:
-                    raise Exception(f'Chapter section without "id" attribute')
-                element['id'] = type_.name
-            section = Section(type_)
-            section.element = element.extract()
-            finalize_section(section)
-            yield section
-    def create_translation(soup):
-        translation = Translation()
-        set_metadata(translation, soup)
-        for section in create_sections(soup):
-            if not section.language:
-                section.language = translation.language
-            translation.sections.append(section)
-        translation.sections.sort(key=lambda s: s.order)
-        return translation
+            section = create_section_from_element(element)
+            translation.add(section)
     with open(path, 'r', encoding='utf-8') as fp:
         soup = BeautifulSoup(fp, 'lxml')
-        translation = create_translation(soup)
+        translation = Translation()
+        set_metadata(translation, soup)
+        add_sections(translation, soup)
         if m := re.match(r'(\d+) - ', Path(path).name):
             translation.prefix = m[1]
         return translation
 
 if __name__ == '__main__':
     main()
-
 
 
 class RereferceId:

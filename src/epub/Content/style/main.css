@@ -17,20 +17,14 @@ p + p {
 
 .chapter {
     text-align: center;
-    margin-top: 2em;
-    margin-bottom: 2.75em;
-}
-
-.chapter-1-2 {
-    text-align: center;
     margin-top: 1.5em;
-    margin-bottom: 0.5em;
+    margin-bottom: 2.25em;
 }
 
-.chapter-2-2 {
+.ch {
     text-align: center;
-    margin-top: 0.5em;
-    margin-bottom: 2.5em;
+    margin-top: 0;
+    margin-bottom: 0.75em;
 }
 
 aside {
@@ -40,4 +34,29 @@ aside {
 aside p {
     margin-top: 0.5em;
     margin-bottom: 0.5em;
+}
+
+h2.translator {
+    margin-top:  0.75em;
+    margin-bottom: 1em;
+}
+
+div.index {
+    margin: 1em 0;
+    line-height: 1.5;
+    text-align: center;
+}
+
+div.index > a {
+    padding-left: 0.25em;
+    padding-right: 0.25em;
+}
+
+.m-li {
+    margin-top: 0.75em;
+}
+
+.bqr {
+    padding: 0;
+    border: 0 none;
 }

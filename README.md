@@ -1,11 +1,13 @@
 # Lao Tzu’s Tao Te Ching translations
 
+Tłumaczenia Tao Te Ching na język angielski i polski.
+
 Work in progress..
 
 ## Uwagi
 
-- dla laików, przystępne, bez szczegółowej analizy źródeł, chodzi o to aby rozpropagować text
 - najbardziej popularne wersje
+- język angielski i polski
 
 ## foreword, preface and introduction (epub:type)
 

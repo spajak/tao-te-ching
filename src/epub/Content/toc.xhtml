@@ -4,7 +4,8 @@
 <head>
     <title>Table of contents</title>
     <meta charset="utf-8"/>
-    <link href="style.css" rel="stylesheet" type="text/css"/>
+    <link href="style/base.css" rel="stylesheet" type="text/css"/>
+    <link href="style/main.css" rel="stylesheet" type="text/css"/>
 </head>
 <body epub:type="frontmatter">
 
@@ -13,10 +14,16 @@
 <h2 class="c m-1">Table of contents</h2>
 
 <ol>
-    {{#translations}}
-    <li><a href="{{path}}">{{label}}</a></li>
-    {{/translations}}
-    <li><a href="yin-yang.xhtml">Yin and Yang</a></li>
+    {{#toc}}
+    <li class="m-li"><a href="{{path}}">{{translator}}</a>
+    <ol class="latin">
+        {{#chapters}}
+        <li><a href="{{path}}">{{title}}</a></li>
+        {{/chapters}}
+    </ol>
+    </li>
+    {{/toc}}
+    <li class="m-li"><a href="yin-yang.xhtml">Yin and Yang</a></li>
 </ol>
 
 </nav>
